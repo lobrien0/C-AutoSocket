@@ -17,9 +17,7 @@ int main()
     const int port = 8090;
     const int proto = 0;
     int queueLength = 10;
-    char ip[] = "67.190.23.178";
-    char ip2[] = "192.168.1.151";
-    char local_host[] = "127.0.0.1";
+    char ip[] = "192.168.1.110";
 
     struct AutoSocket sock;
 
@@ -27,7 +25,7 @@ int main()
     printf("Please Enter The Message You'd Like to Send:\n\t");
     getMessage(buffer, MAXSTR);
 
-    createSocket(&sock, local_host, port, proto, queueLength);
+    createSocket(&sock, ip, port, proto, queueLength);
     printf("[+] Socket Created!\n");
 
     connectToSocket(&sock);
