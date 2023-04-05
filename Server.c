@@ -17,7 +17,8 @@ int main()
     struct AutoSocket clientSock;
     char* buffer = (char*)malloc(MAXSTR * sizeof(char)); bzero(buffer, MAXSTR);
 
-    createSocket(&serverSock, ip, port, proto, queueLength);
+    createSocket(&serverSock, ip, port, proto);
+    serverSock.messageQueue = queueLength;
     printf("[+] Socket Created\n");
 
     bindSocketToPort(&serverSock);
@@ -31,7 +32,8 @@ int main()
         waitForConnection(&serverSock, &clientSock, buffer, MAXSTR);
         receiveMessageFromSocket(&clientSock, buffer, MAXSTR);
         printf("[+] Received:\n\t%s\n", buffer);
-        printf("[ ] FROM:\t%s\n", getSocketAddress(&clientSock));
+        getSocketAddress(&clientSock, buffer, MAXSTR);
+        printf("[ ] FROM:\t%s\n", buffer);
 
         if(strcmp(buffer, "FILE REQUEST") == 0){
             printf("[ ]\tFile Sent!");
