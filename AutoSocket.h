@@ -109,14 +109,15 @@ void bindSocketToPort(struct AutoSocket* server_addr)
 */
 int sendMessageToSocket(struct AutoSocket* sock, char* buffer)
 {
+    int temp;
     if(socketActive(sock)) {
-        int temp = send((*sock).sockfd, buffer, strlen(buffer), (*sock).proto);
+        temp = send((*sock).sockfd, buffer, strlen(buffer), (*sock).proto);
         if(temp < 0){
             printf("[x] Sending Failed...");
         }
         sleep(0.001);
-        return temp;
     }
+    return temp;
 }
 
 /*  Receive Message From Socket
