@@ -44,11 +44,13 @@ void closeSocket(struct AutoSocket*);
 */
 void createSocket(struct AutoSocket* addr, char* ip, const int port, short protos)
 {   
+    // Assigning the set or default values of needed values. 
     (*addr).proto = protos;
     (*addr).lineBufferLen = 1024; //can be changed manually
     (*addr).messageQueue = 3; //can be changed manually
     (*addr).sockfd = 0;
 
+    // Creates the socket and sets File Descripter in struct
     (*addr).sockfd = socket(AF_INET, SOCK_STREAM, (*addr).proto);
     if((*addr).sockfd < 0)
     {
@@ -56,18 +58,19 @@ void createSocket(struct AutoSocket* addr, char* ip, const int port, short proto
         exit(-1);
     }
 
+    // Declaring Address-Form and setting port
     (*addr).sock.sin_family = AF_INET;
     (*addr).sock.sin_port = htons(port);
     
+    // Determins if IP is listening for 'any' IP or needs to be set to a specific address
     if(strcmp(ip, "0") == 0 || strcmp(ip, "INADDR_ANY") == 0 || strcmp(ip, "any") == 0 || strcmp(ip, "all") == 0) {
-        (*addr).sock.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
         printf("[i] ANY_IN Set\n");
     }
+    // Sets specific address
     else {
         (*addr).sock.sin_addr.s_addr = inet_addr(ip);
-        char* time = (char*)malloc(128 * sizeof(char));
-        getSocketAddress(addr, time, 128);
-        printf("[i] IP Set:\t%s\n", time);
+        printf("[i] IP Set\n");
     }
 }
 
@@ -151,14 +154,17 @@ void receiveMessageFromSocket(struct AutoSocket* sock, char* buffer, size_t maxS
 */
 void checkForCommands(struct AutoSocket* sock, char* buffer, int maxStr)
 {
+    // If Client is Requesting file using "GET" Command
     if(strncmp(buffer, "GET", 3) == 0) {
-            buffer += 4;
-
+            buffer += 4; //Increments string pointer past the "GET "
             printf("[+] GET found\n[i] File Requested: %s\n", buffer);
+            
+            //If the File exists
             if(access(buffer, F_OK)){
-                buffer[strlen(buffer)-1] = '\0';
-                printf("[i] BUFFER: %s<\n", buffer);
+                buffer[strlen(buffer)-1] = '\0'; // Removes endline
+                printf("[i] BUFFER: %s<\n", buffer); // Prints where end of file name is
 
+                // space for file name allocated for later buffer use.
                 char* name = (char*)malloc(128 * sizeof(char));
                 bzero(name, 128); strcat(name, buffer);
 
@@ -169,15 +175,18 @@ void checkForCommands(struct AutoSocket* sock, char* buffer, int maxStr)
                 strcat(buffer, name);
                 free(name);
             }
+            // If file couldn't be found:
             else {
                 sendMessageToSocket(sock, "[x] File Not Found!");
                 printf("[-] File Not Found\n");
             }
         }
+        // If Command is "FILE SEND" Prepare to read in a file form socket
         else if(strncmp(buffer, "FILE SEND", 9) == 0) {
             printf("[ ] Receiving File...\n");
             receiveFileOverSocket(sock);
         }
+        // If Command is "LIST" then send a list of files
         else if(strncmp(buffer, "LIST", 4) == 0) {
             sendFileList(sock);
         }
@@ -189,17 +198,22 @@ void checkForCommands(struct AutoSocket* sock, char* buffer, int maxStr)
 */
 void sendFileList(struct AutoSocket* sock)
 {
+    // Allocating data for storage
     char* buffer = (char*)malloc(128*sizeof(char));
     char* list = (char*)malloc(1024*sizeof(char));
-    system("ls > temp.data");
-    FILE *fp = fopen("temp.data", "r");
+
+    system("ls > temp.data"); // Using linux comand and exporting output to temp file
+    FILE *fp = fopen("temp.data", "r"); // Open Temp File
+    
+    //Reads file line by line into 'buffer', which then appends to 'list'
     if(fp!=NULL){
         while(fgets(buffer, 128, fp)){
             if(!(strncmp(buffer, "temp.data", 9) == 0))
                 strcat(list, buffer);
         }
-        sendMessageToSocket(sock, list);
+        sendMessageToSocket(sock, list); // Sends List to client
     }
+    // Error with Temp File
     else
         printf("[-] Could Not Open File");
     system("rm temp.data");
@@ -279,23 +293,28 @@ void sendFileOverSocket(char* fname, struct AutoSocket* sock)
     if(socketActive(sock))
     {
         FILE *fp = fopen(fname, "r");
-        char *buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char));
+        char *buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char)); // Buffer User defined or Default[1024]
 
+        // If files exists
         if(!(fp == NULL))
         {
             printf("[+] Sending File...\n");
-            sendMessageToSocket(sock, "FILE SEND");
-            sendMessageToSocket(sock, fname);
+            sendMessageToSocket(sock, "FILE SEND"); // Sends command to let client know file is about to send
+            sendMessageToSocket(sock, fname); // Sends file name to client
+
+            // While there is still another line to read in file, send it to client
             while(fgets(buffer, (*sock).lineBufferLen, fp) != NULL)
             {
                 sendMessageToSocket(sock, buffer);
             }
-            sendMessageToSocket(sock, "-_END-_");
+            sendMessageToSocket(sock, "-_END-_"); // A message to signal end of file
             printf("[ ] File Sent!\n");
 
-            closeSocket(sock);
+            closeSocket(sock); // Can also be signaled to 
             printf("[i] Socket Closed\n");
         }
+
+        // If Error opening file
         else
         {
             printf("[-] File Not Found at Read!\n");
@@ -315,16 +334,14 @@ void receiveFileOverSocket(struct AutoSocket* sock)
 {
     if(socketActive(sock))
     {
-        char* buffer = (char*)malloc(1024 * sizeof(char)); bzero(buffer, 1024);
-        receiveMessageFromSocket(sock, buffer, 1024);
+        // Buffer allocation size determined by user or by default[1024]
+        char* buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char)); bzero(buffer, (*sock).lineBufferLen);
+        receiveMessageFromSocket(sock, buffer, (*sock).lineBufferLen); //Get Name
 
-        char* fname = (char*)malloc(128 * sizeof(char)); bzero(fname, 128);
-        strcat(fname, buffer);
+        printf("[ ] File Being received: %s\n", buffer);
 
-        printf("[ ] File Being received: %s\n", fname);
-
-        FILE *fp = fopen(fname, "w");
-        while(!(strncmp(buffer, "-_END-_", 7) == 0))
+        FILE *fp = fopen(buffer, "w");
+        while(!(strncmp(buffer, "-_END-_", 7) == 0) || socketActive(sock))
         {
             receiveMessageFromSocket(sock, buffer, 1024);
             if(buffer != NULL) {
@@ -332,9 +349,8 @@ void receiveFileOverSocket(struct AutoSocket* sock)
             }
         }
         fclose(fp);
-        close((*sock).sockfd);
+        closeSocket(sock);
         free(buffer);
-        free(fname);
     }
 }
 
