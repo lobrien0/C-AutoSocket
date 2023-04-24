@@ -1,3 +1,23 @@
+/*
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                                       #
+#   Author Info:                                                        #
+#       Name: Luke O'Brien                                              #
+#       Last Updated: 23 April 2023                                     #
+#                                                                       #
+#   Program Description:                                                #
+#       The following Header file is designed to take traditional       #
+#       C Sockets and make them much more intuitive and easier to       #
+#       use.                                                            #
+#                                                                       #
+#       Everything here is a passion project I have been working on     #
+#       with no end goal in mind. Suggestions are always welcome        #
+#       lobrien@uccs.edu                                                #
+#                                                                       #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
