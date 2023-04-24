@@ -4,7 +4,7 @@
 
 #include "AutoSocket.h"
 
-#define MAXSTR 1024
+#define MAXSTR 2048
 
 void getMessage(char* buffer, size_t maxStr)
 {
@@ -26,16 +26,17 @@ int main()
     getMessage(buffer, MAXSTR);
 
     createSocket(&sock, ip, port, proto);
+    sock.lineBufferLen = MAXSTR;
     printf("[+] Socket Created!\n");
 
     connectToSocket(&sock);
     printf("[+] Socket Connected\n");
 
-    sendMessageToSocket(&sock, buffer);
+    sendToSocket(&sock, buffer);
     printf("[+] Message Sent!\n");
 
-    receiveMessageFromSocket(&sock, buffer, MAXSTR);
-    printf("Message:\n\t%s\n\n", buffer);
+    receiveFromSocket(&sock, buffer);
+    printf("Message:\n----- ----- -----\n%s\n----- ----- -----\n", buffer);
     
     closeSocket(&sock);
     printf("[+] Socket closed!\n");

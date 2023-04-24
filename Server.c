@@ -4,7 +4,7 @@
 
 #include "AutoSocket.h"
 
-#define MAXSTR 1024
+#define MAXSTR 2048
 
 int main()
 {
@@ -27,20 +27,18 @@ int main()
     listenOnSocket(&serverSock);
     printf("[+] Listening for port: %d\n", port);
 
-    while(!strncmp(buffer, "EOL", 3) == 0){
+    while(true){
         printf("[ ] Waiting for Connection...\n");
-        waitForConnection(&serverSock, &clientSock, buffer, MAXSTR);
-        receiveMessageFromSocket(&clientSock, buffer, MAXSTR);
+        waitForConnection(&serverSock, &clientSock, buffer);
+
+        clientSock.lineBufferLen = MAXSTR;
+
+        receiveFromSocket(&clientSock, buffer);
         printf("[+] Received:\n\t%s\n", buffer);
-        getSocketAddress(&clientSock, buffer, MAXSTR);
+
+        getSocketAddress(&clientSock, buffer);
         printf("[ ] FROM:\t%s\n", buffer);
 
-        if(strcmp(buffer, "FILE REQUEST") == 0){
-            printf("[ ]\tFile Sent!");
-        }
         closeSocket(&clientSock);
     }
-
-    closeSocket(&serverSock);
-    printf("\n<--END!-->\n\n");
 }
