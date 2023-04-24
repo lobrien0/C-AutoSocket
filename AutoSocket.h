@@ -66,7 +66,7 @@ void createSocket(struct AutoSocket* sock, char* ip, const int port, short proto
 {   
     // Assigning the set or default values of needed values. 
     (*sock).proto = protos;
-    (*sock).lineBufferLen = 1024; //can be changed manually
+    (*sock).lineBufferLen = 2048; //can be changed manually
     (*sock).messageQueue = 3; //can be changed manually
     (*sock).sockfd = 0;
 
@@ -189,6 +189,7 @@ void checkForCommands(struct AutoSocket* sock, char* buffer)
 
             // Space for name allocated, and buffer copied over
             char name[255];
+            bzero(name, 255);
             strcat(name, buffer);
 
             sendFileOverSocket(buffer, sock);
@@ -231,8 +232,8 @@ void sendFileList(struct AutoSocket* sock)
    struct dirent *dir;
    DIR *d = opendir(".");
 
-   char buffer[1024];
-   bzero(buffer, 1024);
+   char buffer[2048];
+   bzero(buffer, 2048);
    strcat(buffer, "Files:\n----- ----- -----\n");
 
    // If directory is not NULL
@@ -323,14 +324,14 @@ void sendFileOverSocket(char* fname, struct AutoSocket* sock)
 {
     if(socketActive(sock))
     {
-        // If no custom length for lineBufferLength is set, set to 1024
+        // If no custom length for lineBufferLength is set, set to 2048
         if((*sock).lineBufferLen == 0)
-            (*sock).lineBufferLen = 1024;
+            (*sock).lineBufferLen = 2048;
         
         //Open specified file for reading
         FILE *fp = fopen(fname, "r");
 
-        char *buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char)); // Buffer User defined or Default[1024]
+        char *buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char)); // Buffer User defined or Default[2048]
         bzero(buffer, (*sock).lineBufferLen);
 
         // If files exists
@@ -340,9 +341,24 @@ void sendFileOverSocket(char* fname, struct AutoSocket* sock)
             sendToSocket(sock, "FILE SEND"); // Sends command to let client know file is about to send
             sendToSocket(sock, fname); // Sends file name to client
 
-            // While there is still another line to read in file, send it to client
-            while(fgets(buffer, (*sock).lineBufferLen, fp) != NULL)
+            // Program breaks file down by Byte and reads while the end of file isn't hit
+            char cTemp;
+            while(cTemp != EOF)
             {
+                // Reads in blocks the size of the buffer
+                for(int x = 0; x < (*sock).lineBufferLen-1; x++)
+                {
+                    if(cTemp != EOF) 
+                    {
+                    // If the next character isn't the end, add it to buffer
+                    if((cTemp = fgetc(fp)) != EOF)
+                        buffer[x] = cTemp;
+                    // If end of File hit, put a NULL
+                    else
+                        buffer[x] = '\0';
+                    }
+                }
+                buffer[(*sock).lineBufferLen-1] = '\0';
                 sendToSocket(sock, buffer);
                 bzero(buffer, (*sock).lineBufferLen);
             }
@@ -371,8 +387,9 @@ void receiveFileOverSocket(struct AutoSocket* sock)
 {
     if(socketActive(sock))
     {
-        // Buffer allocation size determined by user or by default[1024]
+        // Buffer allocation size determined by user or by default[2048]
         char buffer[(*sock).lineBufferLen];
+        bzero(buffer, (*sock).lineBufferLen);
         receiveFromSocket(sock, buffer); //Get Name
 
         FILE *fp = fopen(buffer, "w");
@@ -382,10 +399,11 @@ void receiveFileOverSocket(struct AutoSocket* sock)
         while(socketActive(sock))
         {
             receiveFromSocket(sock, buffer);
-            fprintf(fp, "%s ", buffer);
+            fputs(buffer, fp);
+            bzero(buffer, (*sock).lineBufferLen);
         }
-        fclose(fp);
         closeSocket(sock);
+        fclose(fp);
     }
 }
 
