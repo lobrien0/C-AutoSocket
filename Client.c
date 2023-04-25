@@ -4,7 +4,7 @@
 
 #include "AutoSocket.h"
 
-#define MAXSTR 2048
+#define MAXSTR 8192
 
 void getMessage(char* buffer, size_t maxStr)
 {
