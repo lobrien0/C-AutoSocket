@@ -206,8 +206,9 @@ void checkForCommands(struct AutoSocket* sock, char* buffer)
         }
     }
     // If Command is "FILE SEND" Prepare to read in a file form socket
-    else if(strncmp(buffer, "FILE SEND", 9) == 0) 
+    else if(strncmp(buffer, "FILE SEND", 9) == 0) {
         receiveFileOverSocket(sock);
+    }
     
     // If Command is "LIST" then send a list of files
     else if(strncmp(buffer, "LIST", 4) == 0) 
@@ -329,7 +330,8 @@ void sendFileOverSocket(char* fname, struct AutoSocket* sock)
             (*sock).lineBufferLen = 2048;
         
         //Open specified file for reading
-        FILE *fp = fopen(fname, "r");
+        FILE *fp = fopen(fname, "rb");
+        long fsize = ftell(fp);
 
         char *buffer = (char*)malloc((*sock).lineBufferLen * sizeof(char)); // Buffer User defined or Default[2048]
         bzero(buffer, (*sock).lineBufferLen);
@@ -342,23 +344,10 @@ void sendFileOverSocket(char* fname, struct AutoSocket* sock)
             sendToSocket(sock, fname); // Sends file name to client
 
             // Program breaks file down by Byte and reads while the end of file isn't hit
-            char cTemp;
-            while(cTemp != EOF)
+            while(!feof(fp))
             {
-                // Reads in blocks the size of the buffer
-                for(int x = 0; x < (*sock).lineBufferLen-1; x++)
-                {
-                    if(cTemp != EOF) 
-                    {
-                    // If the next character isn't the end, add it to buffer
-                    if((cTemp = fgetc(fp)) != EOF)
-                        buffer[x] = cTemp;
-                    // If end of File hit, put a NULL
-                    else
-                        buffer[x] = '\0';
-                    }
-                }
-                buffer[(*sock).lineBufferLen-1] = '\0';
+                fread(buffer, (*sock).lineBufferLen, 1, fp);
+                buffer[(*sock).lineBufferLen] = '\0';
                 sendToSocket(sock, buffer);
                 bzero(buffer, (*sock).lineBufferLen);
             }
@@ -392,14 +381,23 @@ void receiveFileOverSocket(struct AutoSocket* sock)
         bzero(buffer, (*sock).lineBufferLen);
         receiveFromSocket(sock, buffer); //Get Name
 
-        FILE *fp = fopen(buffer, "w");
+        FILE *fp = fopen(buffer, "wb");
         bzero(buffer, (*sock).lineBufferLen);
 
         // While the EOF flag has not been sent
         while(socketActive(sock))
         {
             receiveFromSocket(sock, buffer);
-            fputs(buffer, fp);
+
+            int x, endIndex = 0; 
+            for(x = (*sock).lineBufferLen-1; x >= 0; x--) {
+                if(buffer[x] != '\0') {
+                    endIndex = x+1;
+                    break;
+                }
+            }
+
+            fwrite(buffer, endIndex, 1, fp);
             bzero(buffer, (*sock).lineBufferLen);
         }
         closeSocket(sock);
